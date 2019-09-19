@@ -6,7 +6,7 @@ import sys
 import json
 from base64 import b64encode, b64decode
 from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad
+from Crypto.Random import get_random_bytes
 from credentials import ACCESS_KEY_ID, ACCESS_KEY_SECRET, REGION, CMK_ID 
 from aliyunsdkcore.client import AcsClient
 from aliyunsdkkms.request.v20160120 import EncryptRequest, GenerateDataKeyRequest
@@ -25,6 +25,7 @@ def envelope_encrypt(cmk_id, plainText):
     request.set_KeySpec('AES_256')
     request.set_accept_format('json')
     request.set_protocol_type('https')
+    request.set_NumberOfBytes(32)
 
     # Set the encryption context as a parameter. This does not need to be secret.   
     # e.g. i'm using the author, publication year and publisher to create the encryption context
@@ -39,9 +40,9 @@ def envelope_encrypt(cmk_id, plainText):
     # The Data Key also requires base64 decoding
     data_key = b64decode(json.loads(response[0])['Plaintext'])
 
-    # Instantiate an AES cipher object and perform encryption of plaintext data. Base64 encode the result
-    cipher = AES.new(data_key, AES.MODE_CBC)
-    cipherText = b64encode(cipher.iv + cipher.encrypt(pad(plainText, AES.block_size)))
+    # Instantiate an AES cipher object (using Galois Counter Mode (GCM) as the cipher) and perform encryption of plaintext data. Base64 encode the result
+    cipher = AES.new(data_key, AES.MODE_EAX)
+    cipherText, tag = cipher.encrypt_and_digest(plainText)
 
     # Parse the Alibaba Cloud API's JSON response and get the encryted version of the Data Key
     encrypted_data_key = json.loads(response[0])['CiphertextBlob']
@@ -49,7 +50,7 @@ def envelope_encrypt(cmk_id, plainText):
     # Clear the response variable
     response[0] = 0
 
-    return [cipherText, encrypted_data_key, context]
+    return [b64encode(cipherText), encrypted_data_key, b64encode(cipher.nonce), b64encode(tag), context]
 
 # Main
 def main():
@@ -71,7 +72,11 @@ def main():
             fout.write('*---*')
             fout.write(encrypted_obj[1])    # Encrypted Data Key
             fout.write('*---*')
-            fout.write(encrypted_obj[2])    # Encryption Context (stored in plaintext)
+            fout.write(encrypted_obj[2])    # Nonce
+            fout.write('*---*')
+            fout.write(encrypted_obj[3])    # Message Authentication Code (MAC) Tag
+            fout.write('*---*')
+            fout.write(encrypted_obj[4])    # Encryption Context (stored in plaintext)
 
 if __name__ == '__main__':
     main() 

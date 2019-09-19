@@ -23,7 +23,7 @@ As with other cloud providers, KMS revolves around a Customer Master Key (CMK). 
 
 In these scripts, I've let KMS generate a CMK for me. 
 
-I haven't gotten around to experimenting with **External Keys** yet. External keys imported into Alibaba Cloud KMS must be symmetric keys (256 bit). The import of key materials appears very similar to the process in AWS's KMS.    
+I haven't gotten around to experimenting with **External Keys** yet. External keys imported into Alibaba Cloud KMS must be symmetric keys (256 bit). The import of key materials appears very similar to the process in AWS's KMS.
 
 ### Envelope Encryption
 
@@ -39,12 +39,12 @@ This approach attempts to offset some of the security and performance problems w
 
 * Create a CMK and obtain the ID of the CMK;
 * Call KMS' ```GenerateDataKeyRequest()``` to generate Data Keys, passing the CMK's ID. Returns (in JSON or XML) plaintext Data Key and ciphertext Data Key (encrypted using the specified CMK);
-* By default Data Keys will be 256 bit AES. The ```set_KeySpec``` parameter can be used to change this. Options appear to be either ```AES_128``` or ```AES_256``` (using CBC block mode).  
+* By default Data Keys will be 256 bit AES. The ```set_KeySpec``` parameter can be used to change this. Options appear to be either ```AES_128``` or ```AES_256``` (using the GCM block cipher, for example).  
 * Use plaintext Data Key to encrypt your file locally, generating ciphertext version of the file;
 * Discard plaintext Data Key and flush from memory;
 * Save ciphertext Data Key and ciphertext file to persistent storage device or service.
 
-**Note:** KMS only accepts calls via TLS as its returning the Data Key in plaintext as well as ciphertext forms. KMS doesn't retain any copy of the Data Key from this point on; we are on our own. 
+**Note:** KMS only accepts calls via TLS as its returning the Data Key in plaintext as well as ciphertext forms. KMS doesn't retain any copy of the Data Key from this point on; we are on our own.
 
 <p align="center">
   <img src="/docs/encrypt.png"/>
@@ -54,9 +54,9 @@ This approach attempts to offset some of the security and performance problems w
 
 * Read ciphertext Data Key and ciphertext file from persistent storage device or service;
 * Call KMS' ```DecryptRequest()``` to decrypt the ciphertext Data Key (using the relevant CMK) and obtain plaintext Data Key;
-* Notably ```DecryptRequest()``` doesn't requires passing the ID of the CMK; 
+* Notably ```DecryptRequest()``` doesn't requires passing the ID of the CMK;
 * Use plaintext Data Key to decrypt the file locally;
-* Discard plaintext Data Key and flush from memory. 
+* Discard plaintext Data Key and flush from memory.
 
 <p align="center">
   <img src="/docs/decrypt.png"/>
@@ -64,7 +64,7 @@ This approach attempts to offset some of the security and performance problems w
  
 ### Optional Extras
 
-I've also experimented with ```set_EncryptionContext()```, which is essentially a hashing function providing additional *Integrity* and can be used with ```EncryptRequest()``` and ```GenerateDataKeyRequest()```. I've experimented by passing a JSON array of key-value pairs containing meta-data about the document being encrypted. This acts as the *Encryption Context*. If using this option, the same context needs to be passed back to Alibaba Cloud's ```DecryptRequest()``` function. The encryption context does not need to remain secret and can be stored in plaintext alongside the ciphertext.   
+I've also experimented with ```set_EncryptionContext()```, which is essentially a hashing function providing additional *Integrity* and can be used with ```EncryptRequest()``` and ```GenerateDataKeyRequest()```. I've experimented by passing a JSON array of key-value pairs containing meta-data about the document being encrypted. This acts as the *Encryption Context*. If using this option, the same context needs to be passed back to Alibaba Cloud's ```DecryptRequest()``` function. The encryption context does not need to remain secret and can be stored in plaintext alongside the ciphertext.
 
 ## Prerequisites
 
@@ -77,8 +77,6 @@ pip install json
 pip install base64
 pip install pycryptodome 
 ```
-
-PyCryptodome is a more recent incarnation of PyCrypto. It also neatly handles padding / unpadding required for AES-CBC.
 
 The required components of the Alibaba Cloud SDK can also be installed as follows: 
 
