@@ -38,7 +38,7 @@ def envelope_decrypt(cipherText, encrypted_data_key, nonce, tag, context):
         data_key = [b64decode(json.loads(response[0])['Plaintext'])]
 
         # Instantiate an AES cipher object (using Galois Counter Mode (GCM) as the block cipher) and perform decryption of ciphertext data, using nonce and MAC tag parameters 
-        cipher = AES.new(data_key[0], AES.MODE_EAX, nonce=nonce)
+        cipher = AES.new(data_key[0], AES.MODE_GCM, nonce=nonce)
         plainText = cipher.decrypt_and_verify(cipherText, tag)
 
         # Clear the Data Key variables
