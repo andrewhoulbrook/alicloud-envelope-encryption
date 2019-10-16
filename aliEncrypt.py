@@ -41,7 +41,7 @@ def envelope_encrypt(cmk_id, plainText):
     data_key = b64decode(json.loads(response[0])['Plaintext'])
 
     # Instantiate an AES cipher object (using Galois Counter Mode (GCM) as the cipher) and perform encryption of plaintext data. Base64 encode the result
-    cipher = AES.new(data_key, AES.MODE_EAX)
+    cipher = AES.new(data_key, AES.MODE_GCM)
     cipherText, tag = cipher.encrypt_and_digest(plainText)
 
     # Parse the Alibaba Cloud API's JSON response and get the encryted version of the Data Key
